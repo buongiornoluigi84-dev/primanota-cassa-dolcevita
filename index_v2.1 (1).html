@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0f0f0f"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Cassa"/>
+  <title>Cassa — Il mio negozio</title>
+  <!-- v2.1 -->
+  <link rel="manifest" href="/cassa-negozio/manifest.json"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── TEMA SCURO (default) ── */
+    :root {
+      --bg:      #0d0d0d;
+      --surface: #161616;
+      --card:    #1e1e1e;
+      --border:  #2a2a2a;
+      --accent:  #c8f135;
+      --gold:    #f1c335;
+      --red:     #ff4d4d;
+      --green:   #7bc67e;
+      --text:    #f0f0f0;
+      --muted:   #888;
+      --radius:  16px;
+      --ly1:     #1D9E75;
+      --ly2:     #D85A30;
+      --ly3:     #888780;
+    }
+
+    /* ── TEMA CHIARO ── */
+    body.light {
+      --bg:      #f5f5f0;
+      --surface: #ebebE5;
+      --card:    #ffffff;
+      --border:  #d0d0c8;
+      --accent:  #5a9e00;
+      --gold:    #b08800;
+      --red:     #d63030;
+      --green:   #2e8b3e;
+      --text:    #1a1a1a;
+      --muted:   #666;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overscroll-behavior: none; height: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Syne', sans-serif;
+      height: 100%; overflow: hidden; display: flex; flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── PIN ── */
+    #pin-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 40px; z-index: 999; padding: 32px;
+    }
+    .pin-logo { font-size: 13px; font-weight: 700; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; }
+    .pin-title { font-size: 28px; font-weight: 800; text-align: center; line-height: 1.2; }
+    .pin-title span { color: var(--accent); }
+    .pin-dots { display: flex; gap: 16px; }
+    .pin-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); background: transparent; transition: all 0.2s; }
+    .pin-dot.filled { background: var(--accent); border-color: var(--accent); transform: scale(1.15); }
+    .pin-dot.error  { background: var(--red); border-color: var(--red); animation: shake 0.4s ease; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+    .pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; width: 100%; max-width: 280px; }
+    .pin-btn { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; padding: 20px 0; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .pin-btn:active { background: var(--border); transform: scale(0.95); }
+    .pin-btn.del { font-size: 16px; color: var(--muted); font-family: 'Syne', sans-serif; font-weight: 600; }
+    .pin-error { font-size: 13px; color: var(--red); font-weight: 600; min-height: 18px; }
+
+    /* ── APP SHELL ── */
+    #app { display: none; flex-direction: column; height: 100%; }
+    #app.visible { display: flex; }
+
+    .app-header { flex-shrink: 0; padding: 16px 20px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--bg); z-index: 10; }
+    .app-logo { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+    .app-version { font-size: 9px; color: var(--accent); letter-spacing: 0.1em; }
+    .app-name  { font-size: 18px; font-weight: 800; color: var(--text); }
+    .header-btns { display: flex; gap: 8px; }
+
+    .icon-btn { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+    .nav-tabs { flex-shrink: 0; display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .nav-tab { flex: 1; padding: 12px 4px; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-panels { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; min-height: 0; }
+    .tab-content { display: none; padding: 16px 16px 60px; }
+    .tab-content.active { display: block; }
+
+    /* ── SETUP PANEL ── */
+    #setup-panel {
+      position: fixed; inset: 0; background: var(--bg); z-index: 500;
+      display: none; flex-direction: column;
+    }
+    #setup-panel.open { display: flex; }
+    .setup-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .setup-title { font-size: 18px; font-weight: 800; }
+    .setup-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .setup-section { margin-bottom: 28px; }
+    .setup-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .setup-row { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .setup-row-label { font-size: 14px; font-weight: 600; }
+    .toggle { width: 44px; height: 24px; background: var(--border); border-radius: 12px; position: relative; cursor: pointer; transition: background 0.2s; }
+    .toggle.on { background: var(--accent); }
+    .toggle-knob { width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: left 0.2s; }
+    .toggle.on .toggle-knob { left: 23px; }
+
+    /* Changelog */
+    .changelog-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 8px; }
+    .changelog-version { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--accent); margin-bottom: 6px; }
+    .changelog-date { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .changelog-list { font-size: 13px; color: var(--text); line-height: 1.8; }
+
+    /* ── FORM INSERISCI ── */
+    .date-row { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
+    .date-label { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .date-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+    .db-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .db-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .db-card-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .db-card-value { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--gold); }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; margin-top: 4px; }
+    .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .input-row { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 16px; display: flex; align-items: center; gap: 12px; }
+    .input-row:focus-within { border-color: var(--accent); }
+    .input-icon { font-size: 20px; }
+    .input-wrap { flex: 1; display: flex; flex-direction: column; padding: 10px 0; }
+    .input-name { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+    .input-field { background: transparent; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; width: 100%; }
+    .input-field::placeholder { color: var(--border); }
+    .input-suffix { font-family: 'DM Mono', monospace; font-size: 16px; color: var(--muted); }
+    .total-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .total-label { font-size: 12px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+    .total-value { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; color: var(--accent); }
+    .notes-field { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 15px; width: 100%; min-height: 80px; resize: none; outline: none; margin-bottom: 20px; }
+    .notes-field:focus { border-color: var(--accent); }
+    .notes-field::placeholder { color: var(--border); }
+    .btn-save { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: var(--radius); color: #0d0d0d; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
+    .btn-save:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── TOTALI ── */
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .filter-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+    .filter-input { background: transparent; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; width: 100%; }
+    .btn-accent { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: var(--radius); color: #0d0d0d; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0.05em; cursor: pointer; margin-bottom: 16px; -webkit-tap-highlight-color: transparent; }
+    .btn-accent:active { opacity: 0.85; transform: scale(0.98); }
+    .btn-accent:disabled { opacity: 0.4; }
+    .btn-secondary { width: 100%; padding: 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 20px; -webkit-tap-highlight-color: transparent; }
+    .btn-secondary:active { opacity: 0.7; }
+    .totals-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+    .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); }
+    .totals-row:last-child { border-bottom: none; }
+    .totals-row.divider   { background: var(--surface); }
+    .totals-row.highlight { background: #1a2200; }
+    body.light .totals-row.highlight { background: #e8f5d0; }
+    .totals-lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .totals-val { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; color: var(--text); }
+    .totals-val.accent { color: var(--accent); font-size: 20px; }
+    .totals-val.gold   { color: var(--gold); }
+    .totals-val.pos    { color: var(--green); }
+    .totals-val.neg    { color: var(--red); }
+    .notes-section { margin-top: 4px; margin-bottom: 16px; }
+    .notes-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .note-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; }
+    .note-date { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--accent); display: block; margin-bottom: 4px; }
+    .note-text { font-size: 14px; color: var(--text); }
+
+    /* ── SETTIMANA ── */
+    .week-nav { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .week-nav-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; color: var(--text); font-size: 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .week-nav-center { display: flex; align-items: center; gap: 10px; }
+    .week-field { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .week-field-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+    .week-field-input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; text-align: center; padding: 4px 6px; outline: none; width: 52px; }
+    .year-field-input { width: 68px; }
+    .week-range-label { font-size: 11px; color: var(--accent); font-weight: 600; text-align: center; padding: 6px 0 10px; }
+
+    /* Tabella settimana */
+    .week-table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 14px; }
+    .week-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 400px; }
+    .week-table th { padding: 8px 6px; background: var(--surface); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); text-align: right; }
+    .week-table th:first-child { text-align: left; padding-left: 10px; }
+    .week-table td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: right; }
+    .week-table td:first-child { text-align: left; padding-left: 10px; }
+    .week-table tr:last-child td { border-bottom: none; }
+    .week-table tr.week-total td { background: var(--surface); font-weight: 700; }
+    .week-table tr.not-registered td { opacity: 0.45; }
+    .day-name { font-size: 11px; font-weight: 600; color: var(--text); }
+    .day-date { font-size: 9px; color: var(--muted); }
+    .cell-amount { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text); display: block; }
+    .cell-pct { font-family: 'DM Mono', monospace; font-size: 10px; display: block; }
+    .cell-pct.pos { color: var(--green); }
+    .cell-pct.neg { color: var(--red); }
+    .cell-pct.na  { color: var(--muted); }
+    .sales-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--accent); }
+    .week-total .sales-val { font-size: 14px; }
+    th.border-l, td.border-l { border-left: 1px solid var(--border); }
+
+    /* Grafico */
+    .week-chart-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px 10px; margin-bottom: 14px; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-line { width: 16px; height: 2px; border-radius: 2px; }
+    .legend-label { font-size: 9px; color: var(--muted); }
+
+    /* SPINNER */
+    .spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row { display: flex; justify-content: center; padding: 40px; }
+    .db-loading { font-family: 'DM Mono', monospace; font-size: 16px; color: var(--muted); animation: pulse 1s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--accent); color: #0d0d0d; font-weight: 700; font-size: 14px; letter-spacing: 0.05em; padding: 14px 28px; border-radius: 100px; transition: transform 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 9999; white-space: nowrap; }
+    .toast.show  { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+
+<!-- PIN -->
+<div id="pin-screen">
+  <p class="pin-logo">Cassa App</p>
+  <h1 class="pin-title">Inserisci il tuo<br/><span>PIN</span></h1>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+  </div>
+  <p class="pin-error" id="pin-error"></p>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn" style="visibility:hidden"></button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn del" onclick="pinDel()">⌫</button>
+  </div>
+</div>
+
+<!-- SETUP PANEL -->
+<div id="setup-panel">
+  <div class="setup-header">
+    <span class="setup-title">⚙️ Impostazioni</span>
+    <button class="icon-btn" onclick="closeSetup()">✕</button>
+  </div>
+  <div class="setup-body">
+
+    <div class="setup-section">
+      <p class="setup-section-title">Aspetto</p>
+      <div class="setup-row">
+        <span class="setup-row-label">☀️ Tema chiaro</span>
+        <div class="toggle" id="theme-toggle" onclick="toggleTheme()">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <p class="setup-section-title">📋 Changelog versioni</p>
+
+      <div class="changelog-item">
+        <div class="changelog-version">v2.1</div>
+        <div class="changelog-date">Settembre 2026</div>
+        <div class="changelog-list">
+          • Tab Settimana con tabella Lun→Dom<br/>
+          • Grafico a 5 linee (Sales, Forecast, LY-1, LY-2, LY-3)<br/>
+          • Navigazione settimana con frecce e campo manuale<br/>
+          • Export PDF nel tab Totali<br/>
+          • Tema chiaro / scuro<br/>
+          • Questo pannello Impostazioni con changelog
+        </div>
+      </div>
+
+      <div class="changelog-item">
+        <div class="changelog-version">v2.0</div>
+        <div class="changelog-date">Settembre 2026</div>
+        <div class="changelog-list">
+          • Confronto Last Year -1, -2, -3 anni nei Totali<br/>
+          • Date Totali preimpostate ad oggi<br/>
+          • Versione visibile nell'header
+        </div>
+      </div>
+
+      <div class="changelog-item">
+        <div class="changelog-version">v1.0</div>
+        <div class="changelog-date">Agosto 2026</div>
+        <div class="changelog-list">
+          • Prima versione app<br/>
+          • Inserimento incassi (contanti, carte, JustEat)<br/>
+          • Forecast e Last Year per data<br/>
+          • Tab Totali con filtro per periodo<br/>
+          • Note giornaliere<br/>
+          • PIN di accesso<br/>
+          • Migrazione 1200 righe dati storici
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <header class="app-header">
+    <div>
+      <p class="app-logo">Dolce Vita &nbsp;<span class="app-version">v2.1</span></p>
+      <p class="app-name">Cassa</p>
+    </div>
+    <div class="header-btns">
+      <button class="icon-btn" onclick="openSetup()">⚙️</button>
+      <button class="icon-btn" onclick="lockApp()">🔒</button>
+    </div>
+  </header>
+
+  <nav class="nav-tabs">
+    <div class="nav-tab active" onclick="switchTab('inserisci')">Inserisci</div>
+    <div class="nav-tab"        onclick="switchTab('settimana')">Settimana</div>
+    <div class="nav-tab"        onclick="switchTab('totali')">Totali</div>
+  </nav>
+
+  <div class="tab-panels">
+
+    <!-- ── TAB INSERISCI ── -->
+    <div class="tab-content active" id="tab-inserisci">
+      <div class="date-row">
+        <span class="date-label">📅 Data</span>
+        <input type="date" class="date-input" id="entry-date" onchange="onDateChange()"/>
+      </div>
+      <div class="db-info">
+        <div class="db-card">
+          <p class="db-card-label">🎯 Forecast</p>
+          <p class="db-card-value" id="lbl-forecast">—</p>
+        </div>
+        <div class="db-card">
+          <p class="db-card-label">📅 Anno prec.</p>
+          <p class="db-card-value" id="lbl-lastyear">—</p>
+        </div>
+      </div>
+      <p class="section-label">Incassi</p>
+      <div class="input-group">
+        <div class="input-row">
+          <span class="input-icon">💵</span>
+          <div class="input-wrap">
+            <span class="input-name">Contanti</span>
+            <input type="number" inputmode="decimal" class="input-field" id="inp-cash" placeholder="0.00" oninput="updateTotal()"/>
+          </div>
+          <span class="input-suffix">£</span>
+        </div>
+        <div class="input-row">
+          <span class="input-icon">💳</span>
+          <div class="input-wrap">
+            <span class="input-name">Carte</span>
+            <input type="number" inputmode="decimal" class="input-field" id="inp-card" placeholder="0.00" oninput="updateTotal()"/>
+          </div>
+          <span class="input-suffix">£</span>
+        </div>
+        <div class="input-row">
+          <span class="input-icon">🛵</span>
+          <div class="input-wrap">
+            <span class="input-name">JustEat</span>
+            <input type="number" inputmode="decimal" class="input-field" id="inp-justeat" placeholder="0.00" oninput="updateTotal()"/>
+          </div>
+          <span class="input-suffix">£</span>
+        </div>
+      </div>
+      <div class="total-preview">
+        <span class="total-label">Totale giornata</span>
+        <span class="total-value" id="lbl-total">£ 0,00</span>
+      </div>
+      <p class="section-label">Note</p>
+      <textarea class="notes-field" id="inp-notes" placeholder="Es: chiuso x dottore, neve, aperto 2 ore in più..."></textarea>
+      <button class="btn-save" id="btn-save" onclick="saveEntry()">SALVA INCASSO</button>
+    </div>
+
+    <!-- ── TAB SETTIMANA ── -->
+    <div class="tab-content" id="tab-settimana">
+
+      <div class="week-nav">
+        <button class="week-nav-btn" onclick="changeWeek(-1)">◀</button>
+        <div class="week-nav-center">
+          <div class="week-field">
+            <span class="week-field-label">Sett.</span>
+            <input type="number" class="week-field-input" id="inp-week" min="1" max="53" onchange="loadWeekData()"/>
+          </div>
+          <span style="color:var(--muted);font-size:16px">·</span>
+          <div class="week-field">
+            <span class="week-field-label">Anno</span>
+            <input type="number" class="week-field-input year-field-input" id="inp-year" min="2020" max="2035" onchange="loadWeekData()"/>
+          </div>
+        </div>
+        <button class="week-nav-btn" onclick="changeWeek(1)">▶</button>
+      </div>
+
+      <p class="week-range-label" id="week-range-label">—</p>
+
+      <div class="loading-row" id="week-loading" style="display:none"><div class="spinner"></div></div>
+
+      <div class="week-table-wrap" id="week-table-wrap" style="display:none">
+        <table class="week-table" id="week-table">
+          <thead>
+            <tr>
+              <th>Giorno</th>
+              <th>Sales</th>
+              <th class="border-l">Forecast<br/>% diff</th>
+              <th class="border-l">LY -1<br/>% diff</th>
+              <th class="border-l">LY -2<br/>% diff</th>
+              <th class="border-l">LY -3<br/>% diff</th>
+            </tr>
+          </thead>
+          <tbody id="week-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="week-chart-box" id="week-chart-box" style="display:none">
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-line" style="background:#378ADD"></div><span class="legend-label">Sales</span></div>
+          <div class="legend-item"><div class="legend-line" style="background:#EF9F27;opacity:0.8"></div><span class="legend-label">Forecast</span></div>
+          <div class="legend-item"><div class="legend-line" style="background:#1D9E75;opacity:0.8"></div><span class="legend-label">LY -1</span></div>
+          <div class="legend-item"><div class="legend-line" style="background:#D85A30;opacity:0.8"></div><span class="legend-label">LY -2</span></div>
+          <div class="legend-item"><div class="legend-line" style="background:#888780;opacity:0.7"></div><span class="legend-label">LY -3</span></div>
+        </div>
+        <svg id="week-chart-svg" viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;overflow:visible;"></svg>
+      </div>
+
+    </div>
+
+    <!-- ── TAB TOTALI ── -->
+    <div class="tab-content" id="tab-totali">
+      <div class="filter-row">
+        <div class="filter-card">
+          <span class="filter-label">📅 Dal</span>
+          <input type="date" class="filter-input" id="filter-from"/>
+        </div>
+        <div class="filter-card">
+          <span class="filter-label">📅 Al</span>
+          <input type="date" class="filter-input" id="filter-to"/>
+        </div>
+      </div>
+      <button class="btn-accent" id="btn-search" onclick="loadTotals()">CALCOLA TOTALI</button>
+      <div class="loading-row" id="totals-loading" style="display:none"><div class="spinner"></div></div>
+      <div id="totals-result"></div>
+    </div>
+
+  </div><!-- /tab-panels -->
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIGURAZIONE
+// ══════════════════════════════════════════════
+const SCRIPT_URL = 'INCOLLA_QUI_L_URL_DEL_TUO_APPS_SCRIPT';
+const PIN        = '1234';
+
+// ── PULL-TO-REFRESH BLOCKER ──
+document.querySelector('.tab-panels').addEventListener('touchstart', function(e){
+  this._sy = e.touches[0].clientY;
+}, {passive:true});
+document.querySelector('.tab-panels').addEventListener('touchmove', function(e){
+  if (this.scrollTop === 0 && e.touches[0].clientY > this._sy) e.preventDefault();
+}, {passive:false});
+
+// ── TEMA ──
+let lightMode = localStorage.getItem('theme') === 'light';
+function applyTheme() {
+  document.body.classList.toggle('light', lightMode);
+  const t = document.getElementById('theme-toggle');
+  if (t) t.classList.toggle('on', lightMode);
+}
+applyTheme();
+
+function toggleTheme() {
+  lightMode = !lightMode;
+  localStorage.setItem('theme', lightMode ? 'light' : 'dark');
+  applyTheme();
+}
+
+// ── SETUP PANEL ──
+function openSetup()  { document.getElementById('setup-panel').classList.add('open'); }
+function closeSetup() { document.getElementById('setup-panel').classList.remove('open'); }
+
+// ── PIN ──
+let pinBuffer = '', appUnlocked = false;
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && appUnlocked) document.getElementById('pin-screen').style.display = 'none';
+});
+
+function pinPress(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d; updatePinDots();
+  if (pinBuffer.length === 4) checkPin();
+}
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0,-1); updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updatePinDots() {
+  for (let i=0;i<4;i++) document.getElementById('d'+i).className='pin-dot'+(i<pinBuffer.length?' filled':'');
+}
+function checkPin() {
+  if (pinBuffer === PIN) {
+    appUnlocked = true;
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    initApp();
+  } else {
+    for (let i=0;i<4;i++) document.getElementById('d'+i).className='pin-dot error';
+    document.getElementById('pin-error').textContent = 'PIN errato. Riprova.';
+    setTimeout(()=>{ pinBuffer=''; updatePinDots(); }, 700);
+  }
+}
+function lockApp() {
+  appUnlocked = false; pinBuffer = ''; updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+}
+
+// ── INIT ──
+let dbForecast = 0, dbLastYear = 0;
+
+function initApp() {
+  setTodayDate();
+  setDefaultFilterDates();
+  initWeek();
+  onDateChange();
+}
+
+function toInputDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function setTodayDate() {
+  document.getElementById('entry-date').value = toInputDate(new Date());
+}
+function setDefaultFilterDates() {
+  const t = toInputDate(new Date());
+  document.getElementById('filter-from').value = t;
+  document.getElementById('filter-to').value   = t;
+}
+function getFormattedDate(id) {
+  const val = document.getElementById(id||'entry-date').value;
+  if (!val) return null;
+  const [y,m,d] = val.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// ── CAMBIO DATA ──
+async function onDateChange() {
+  const date = getFormattedDate('entry-date');
+  if (!date) return;
+  document.getElementById('lbl-forecast').innerHTML = '<span class="db-loading">...</span>';
+  document.getElementById('lbl-lastyear').innerHTML = '<span class="db-loading">...</span>';
+  document.getElementById('btn-save').disabled = true;
+
+  const data = await apiGet({ action:'getDateInfo', date });
+  if (!data) { showToast('Errore di connessione', true); document.getElementById('btn-save').disabled=false; return; }
+
+  dbForecast = data.forecast||0;
+  dbLastYear = data.lastyear||0;
+  document.getElementById('lbl-forecast').textContent = dbForecast ? '£ '+fmt(dbForecast) : '—';
+  document.getElementById('lbl-lastyear').textContent = dbLastYear ? '£ '+fmt(dbLastYear) : '—';
+
+  if (data.existing) {
+    document.getElementById('inp-cash').value    = data.existing.cash||'';
+    document.getElementById('inp-card').value    = data.existing.card||'';
+    document.getElementById('inp-justeat').value = data.existing.justeat||'';
+    document.getElementById('inp-notes').value   = data.existing.notes||'';
+    document.getElementById('btn-save').disabled = true;
+    document.getElementById('btn-save').style.opacity = '0.45';
+    document.getElementById('btn-save').textContent   = 'GIÀ REGISTRATA ✓';
+    showToast('Giornata già registrata ✓');
+  } else {
+    document.getElementById('inp-cash').value=''; document.getElementById('inp-card').value='';
+    document.getElementById('inp-justeat').value=''; document.getElementById('inp-notes').value='';
+    document.getElementById('btn-save').disabled=false;
+    document.getElementById('btn-save').style.opacity='1';
+    document.getElementById('btn-save').textContent='SALVA INCASSO';
+  }
+  updateTotal();
+}
+
+function updateTotal() {
+  const c=parseFloat(document.getElementById('inp-cash').value)||0;
+  const k=parseFloat(document.getElementById('inp-card').value)||0;
+  const j=parseFloat(document.getElementById('inp-justeat').value)||0;
+  document.getElementById('lbl-total').textContent='£ '+fmt(c+k+j);
+}
+
+// ── SALVA ──
+async function saveEntry() {
+  const date    = getFormattedDate('entry-date');
+  const cash    = parseFloat(document.getElementById('inp-cash').value)||0;
+  const card    = parseFloat(document.getElementById('inp-card').value)||0;
+  const justeat = parseFloat(document.getElementById('inp-justeat').value)||0;
+  const notes   = document.getElementById('inp-notes').value.trim();
+
+  if (!date) { showToast('Seleziona una data',true); return; }
+  if (cash===0&&card===0&&justeat===0&&!notes) { showToast('Inserisci un incasso o una nota',true); return; }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled=true; btn.textContent='Salvataggio...';
+
+  const res = await apiPost({ action:'addRevenue', date, cash, card, justeat, notes, forecast:dbForecast, lastyear:dbLastYear });
+  if (res&&res.status==='success') {
+    showToast('Salvato! ✓'); btn.textContent='GIÀ REGISTRATA ✓'; btn.style.opacity='0.45';
+  } else {
+    showToast('Errore nel salvataggio',true); btn.disabled=false; btn.style.opacity='1'; btn.textContent='SALVA INCASSO';
+  }
+}
+
+// ── TAB ──
+function switchTab(tab) {
+  const tabs = ['inserisci','settimana','totali'];
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelector('.tab-panels').scrollTop=0;
+  if (tab==='settimana') loadWeekData();
+}
+
+// ══════════════════════════════════════════════
+//  SETTIMANA
+// ══════════════════════════════════════════════
+
+function getISOWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day  = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return { week: Math.ceil((((date - yearStart) / 86400000) + 1) / 7), year: date.getUTCFullYear() };
+}
+
+function getISOWeekMonday(week, year) {
+  const jan4    = new Date(year, 0, 4);
+  const dow     = jan4.getDay() || 7;
+  const monday  = new Date(jan4);
+  monday.setDate(jan4.getDate() - (dow-1) + (week-1)*7);
+  return monday;
+}
+
+function initWeek() {
+  const { week, year } = getISOWeek(new Date());
+  document.getElementById('inp-week').value = week;
+  document.getElementById('inp-year').value = year;
+}
+
+function changeWeek(delta) {
+  let w = parseInt(document.getElementById('inp-week').value)||1;
+  let y = parseInt(document.getElementById('inp-year').value)||new Date().getFullYear();
+  w += delta;
+  if (w < 1)  { y--; w = weeksInYear(y); }
+  if (w > weeksInYear(y)) { y++; w = 1; }
+  document.getElementById('inp-week').value = w;
+  document.getElementById('inp-year').value = y;
+  loadWeekData();
+}
+
+function weeksInYear(y) {
+  const d = new Date(y, 11, 31);
+  const { week } = getISOWeek(d);
+  return week === 1 ? getISOWeek(new Date(y, 11, 24)).week : week;
+}
+
+function fmtDate(dd) {
+  const [d,m] = dd.split('/');
+  return d+'/'+m;
+}
+
+const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+
+async function loadWeekData() {
+  const week = parseInt(document.getElementById('inp-week').value)||1;
+  const year = parseInt(document.getElementById('inp-year').value)||new Date().getFullYear();
+
+  const monday = getISOWeekMonday(week, year);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const fmtD   = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  document.getElementById('week-range-label').textContent =
+    `${fmtD(monday).slice(0,5)} — ${fmtD(sunday).slice(0,5)} ${year}`;
+
+  document.getElementById('week-loading').style.display='flex';
+  document.getElementById('week-table-wrap').style.display='none';
+  document.getElementById('week-chart-box').style.display='none';
+
+  const data = await apiGet({ action:'getWeekData', week, year });
+
+  document.getElementById('week-loading').style.display='none';
+  if (!data) { showToast('Errore di connessione',true); return; }
+
+  renderWeekTable(data);
+  renderWeekChart(data);
+
+  document.getElementById('week-table-wrap').style.display='block';
+  document.getElementById('week-chart-box').style.display='block';
+}
+
+function renderWeekTable(data) {
+  function cell(amount, pct) {
+    const amtStr = amount ? fmt0(amount) : '—';
+    const pctCls = pct===null ? 'na' : (pct>=0?'pos':'neg');
+    const pctStr = pct===null ? '—' : (pct>=0?'+':'')+pct+'%';
+    return `<td class="border-l"><span class="cell-amount">${amtStr}</span><span class="cell-pct ${pctCls}">${pctStr}</span></td>`;
+  }
+
+  let rows = '';
+  data.days.forEach((day, i) => {
+    const notReg = day.sales === null;
+    rows += `<tr class="${notReg?'not-registered':''}">
+      <td><div class="day-name">${DAY_NAMES[i]}</div><div class="day-date">${fmtDate(day.date)}</div></td>
+      <td><span class="sales-val">${notReg?'—':'£'+fmt0(day.sales)}</span></td>
+      ${cell(day.forecast, notReg?null:day.pctF)}
+      ${cell(day.ly1,      notReg?null:day.pctLY1)}
+      ${cell(day.ly2,      notReg?null:day.pctLY2)}
+      ${cell(day.ly3,      notReg?null:day.pctLY3)}
+    </tr>`;
+  });
+
+  const t = data.totals;
+  function totCell(amount, pct) {
+    const pctCls = pct===null?'na':(pct>=0?'pos':'neg');
+    const pctStr = pct===null?'—':(pct>=0?'+':'')+pct+'%';
+    return `<td class="border-l"><span class="cell-amount">${fmt0(amount)}</span><span class="cell-pct ${pctCls}">${pctStr}</span></td>`;
+  }
+
+  rows += `<tr class="week-total">
+    <td><div class="day-name">Totale</div></td>
+    <td><span class="sales-val">£${fmt0(t.sales)}</span></td>
+    ${totCell(t.forecast,t.pctF)}
+    ${totCell(t.ly1,t.pctLY1)}
+    ${totCell(t.ly2,t.pctLY2)}
+    ${totCell(t.ly3,t.pctLY3)}
+  </tr>`;
+
+  document.getElementById('week-tbody').innerHTML = rows;
+}
+
+function renderWeekChart(data) {
+  const days = data.days;
+  const allVals = [];
+  days.forEach(d => {
+    if (d.sales!==null) allVals.push(d.sales);
+    allVals.push(d.forecast, d.ly1, d.ly2, d.ly3);
+  });
+  const maxV = Math.max(...allVals.filter(v=>v>0), 1);
+
+  const W=320, H=80, PL=20, PR=10, PT=5, PB=20;
+  const xs = [50,90,130,170,210,250,290];
+
+  function y(v) { return PT + (H-PT-PB) * (1 - v/maxV); }
+
+  function polyline(vals, color, dash='', opacity=1) {
+    const pts = vals.map((v,i)=>`${xs[i]},${y(v)}`).join(' ');
+    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" ${dash?`stroke-dasharray="${dash}"`:''}  opacity="${opacity}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+
+  function salesLine(days) {
+    const registered = days.filter(d=>d.sales!==null);
+    if (registered.length === 0) return '';
+    const pts = registered.map(d=>{
+      const i = days.indexOf(d);
+      return `${xs[i]},${y(d.sales)}`;
+    }).join(' ');
+    const dots = registered.map(d=>{
+      const i = days.indexOf(d);
+      return `<circle cx="${xs[i]}" cy="${y(d.sales)}" r="3.5" fill="#378ADD"/>`;
+    }).join('');
+    return `<polyline points="${pts}" fill="none" stroke="#378ADD" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  }
+
+  const gridLines = `
+    <line x1="${PL}" y1="${y(maxV)}" x2="${W-PR}" y2="${y(maxV)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>
+    <line x1="${PL}" y1="${y(maxV/2)}" x2="${W-PR}" y2="${y(maxV/2)}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>
+    <line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="var(--border)" stroke-width="0.5"/>`;
+
+  const labels = DAY_NAMES.map((n,i)=>`<text x="${xs[i]}" y="${H}" font-size="8" fill="var(--muted)" text-anchor="middle">${n[0]}</text>`).join('');
+
+  const svg = `
+    ${gridLines}
+    ${polyline(days.map(d=>d.ly3),     '#888780','4,3',0.7)}
+    ${polyline(days.map(d=>d.ly2),     '#D85A30','4,3',0.8)}
+    ${polyline(days.map(d=>d.ly1),     '#1D9E75','4,3',0.8)}
+    ${polyline(days.map(d=>d.forecast),'#EF9F27','4,3',0.8)}
+    ${salesLine(days)}
+    ${labels}`;
+
+  document.getElementById('week-chart-svg').innerHTML = svg;
+}
+
+// ── TOTALI ──
+async function loadTotals() {
+  const startDate = getFormattedDate('filter-from');
+  const endDate   = getFormattedDate('filter-to');
+  if (!startDate||!endDate) { showToast('Seleziona le date',true); return; }
+
+  const btn = document.getElementById('btn-search');
+  btn.disabled=true; btn.textContent='Calcolo...';
+  document.getElementById('totals-loading').style.display='flex';
+  document.getElementById('totals-result').innerHTML='';
+
+  const data = await apiGet({ action:'getTotals', startDate, endDate });
+
+  document.getElementById('totals-loading').style.display='none';
+  btn.disabled=false; btn.textContent='CALCOLA TOTALI';
+  if (!data) { showToast('Errore di connessione',true); return; }
+
+  function cls(v)    { return v===null?'':(v>=0?'pos':'neg'); }
+  function pctStr(v) { return v===null?'—':(v>=0?'+':'')+v+'%'; }
+  function diffRow(label,val) { return val===null?'':`<div class="totals-row"><span class="totals-lbl">${label}</span><span class="totals-val ${cls(val)}">£ ${fmtSigned(val)}</span></div>`; }
+  function pctRow(label,val)  { return val===null?'':`<div class="totals-row"><span class="totals-lbl">${label}</span><span class="totals-val ${cls(val)}">${pctStr(val)}</span></div>`; }
+
+  const notesHtml = data.notes&&data.notes.length>0 ? `
+    <div class="notes-section">
+      <p class="notes-section-title">📝 Note del periodo</p>
+      ${data.notes.map(n=>`<div class="note-item"><span class="note-date">${n.date}</span><span class="note-text">${escHtml(n.note)}</span></div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('totals-result').innerHTML = `
+    <div class="totals-box">
+      <div class="totals-row"><span class="totals-lbl">💵 Contanti</span><span class="totals-val">£ ${fmt(data.cash)}</span></div>
+      <div class="totals-row"><span class="totals-lbl">💳 Carte</span><span class="totals-val">£ ${fmt(data.card)}</span></div>
+      <div class="totals-row"><span class="totals-lbl">🛵 JustEat</span><span class="totals-val">£ ${fmt(data.justeat)}</span></div>
+      <div class="totals-row highlight"><span class="totals-lbl" style="color:var(--accent);font-weight:700">💰 Totale Sales</span><span class="totals-val accent">£ ${fmt(data.sales)}</span></div>
+      <div class="totals-row divider"><span class="totals-lbl">🎯 Forecast</span><span class="totals-val gold">£ ${fmt(data.forecast)}</span></div>
+      ${diffRow('Diff vs Forecast',data.diffF)}${pctRow('% vs Forecast',data.pctF)}
+      <div class="totals-row divider"><span class="totals-lbl">📅 1 Year Ago</span><span class="totals-val gold">£ ${fmt(data.ly1)}</span></div>
+      ${diffRow('Diff vs 1Y Ago',data.diffLY1)}${pctRow('% vs 1Y Ago',data.pctLY1)}
+      ${data.ly2?`<div class="totals-row divider"><span class="totals-lbl">📅 2 Years Ago</span><span class="totals-val gold">£ ${fmt(data.ly2)}</span></div>${diffRow('Diff vs 2Y Ago',data.diffLY2)}${pctRow('% vs 2Y Ago',data.pctLY2)}`:''}
+      ${data.ly3?`<div class="totals-row divider"><span class="totals-lbl">📅 3 Years Ago</span><span class="totals-val gold">£ ${fmt(data.ly3)}</span></div>${diffRow('Diff vs 3Y Ago',data.diffLY3)}${pctRow('% vs 3Y Ago',data.pctLY3)}`:''}
+    </div>
+    ${notesHtml}
+    <button class="btn-secondary" onclick="exportPDF()">📄 ESPORTA PDF</button>`;
+}
+
+// ── EXPORT PDF ──
+function exportPDF() {
+  const result = document.getElementById('totals-result');
+  if (!result || !result.innerHTML.trim()) { showToast('Calcola prima i totali', true); return; }
+
+  const from = document.getElementById('filter-from').value;
+  const to   = document.getElementById('filter-to').value;
+
+  const rows = [...result.querySelectorAll('.totals-row')].map(row => {
+    const lbl = row.querySelector('.totals-lbl')?.textContent || '';
+    const val = row.querySelector('.totals-val')?.textContent || '';
+    return `<tr><td>${lbl}</td><td style="text-align:right"><b>${val}</b></td></tr>`;
+  }).join('');
+
+  const noteItems = [...result.querySelectorAll('.note-item')].map(n => {
+    const date = n.querySelector('.note-date')?.textContent||'';
+    const text = n.querySelector('.note-text')?.textContent||'';
+    return `<tr><td>${date}</td><td>${text}</td></tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+    <title>Report ${from} — ${to}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#111;font-size:13px}
+      h1{font-size:18px;margin-bottom:4px}
+      h2{font-size:13px;color:#666;font-weight:normal;margin-bottom:20px}
+      table{width:100%;border-collapse:collapse;margin-bottom:20px}
+      td{padding:8px 10px;border-bottom:1px solid #eee}
+      tr:last-child td{border-bottom:none}
+      .divider td{background:#f5f5f0;font-weight:bold}
+      .highlight td{background:#e8f5d0}
+      .pos{color:green}.neg{color:red}
+    </style></head><body>
+    <h1>🏪 Dolce Vita — Report Incassi</h1>
+    <h2>Periodo: ${from} — ${to}</h2>
+    <table>${rows}</table>
+    ${noteItems?`<h2>📝 Note del periodo</h2><table>${noteItems}</table>`:''}
+    <p style="color:#999;font-size:11px;margin-top:30px">Generato il ${new Date().toLocaleDateString('it-IT')} • Cassa App v2.1</p>
+    </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `report_${from}_${to}.html`.replace(/\//g,'-');
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Report scaricato! ✓');
+}
+
+// ── API ──
+async function apiGet(params) {
+  if (!SCRIPT_URL||SCRIPT_URL.includes('INCOLLA')) return null;
+  try { const r=await fetch(`${SCRIPT_URL}?${new URLSearchParams(params)}`); return await r.json(); }
+  catch { return null; }
+}
+async function apiPost(params) {
+  if (!SCRIPT_URL||SCRIPT_URL.includes('INCOLLA')) return null;
+  try { const r=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(params).toString()}); return await r.json(); }
+  catch { return null; }
+}
+
+// ── UTILS ──
+function fmt(n)       { return Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmt0(n)      { return Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+function fmtSigned(n) { return (n>=0?'+':'')+fmt(n); }
+function escHtml(s)   { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let toastTimer;
+function showToast(msg,isError=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(isError?' error':'')+' show';
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
